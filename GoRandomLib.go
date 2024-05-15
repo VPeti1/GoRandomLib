@@ -14,6 +14,7 @@ import (
 	"math/big"
 	"net"
 	"os"
+	"os/exec"
 	"os/user"
 	"runtime"
 	"strings"
@@ -267,4 +268,28 @@ func encrypt(data []byte) (string, error) {
 
 	ciphertext := gcm.Seal(nonce, nonce, data, nil)
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+func clear() {
+	if detectOS() == "windows" {
+		cmd := exec.Command("clear")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	} else {
+		cmd := exec.Command("cls")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
+}
+
+func getInput(prompt string) string {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print(prompt)
+	input, _ := reader.ReadString('\n')
+	return strings.TrimSpace(input)
+}
+
+func systemPause() {
+	fmt.Println("Press Enter to continue...")
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
 }
