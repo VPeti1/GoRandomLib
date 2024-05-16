@@ -293,3 +293,148 @@ func systemPause() {
 	fmt.Println("Press Enter to continue...")
 	bufio.NewReader(os.Stdin).ReadBytes('\n')
 }
+
+func runCommand(input string) {
+	cmd := exec.Command("sh", "-c", input)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Run()
+}
+
+func ask(question string) (answer string) {
+	fmt.Println(question)
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	ans := scanner.Text()
+	return ans
+}
+
+func isFileEmpty(filePath string) bool {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return false
+	}
+
+	return fileInfo.Size() == 0
+}
+
+func lastModifiedTime(filePath string) string {
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		return "Unknown time"
+	}
+
+	// Format the last modified time as a string
+	modTime := fileInfo.ModTime().Format("2006-01-02 15:04:05")
+
+	return modTime
+}
+
+func printFileContents(fileName string) {
+	contents, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		return
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(string(contents)))
+	for scanner.Scan() {
+		line := scanner.Text()
+		// Skip  "func main() {" and empty lines
+		if !strings.Contains(line, "func main() {") && len(strings.TrimSpace(line)) > 0 {
+			fmt.Println(line)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Println("Error scanning file:", err)
+	}
+	fmt.Println("<")
+}
+
+func removeLastLineFromFile(fileName string) error {
+	file, err := os.OpenFile(fileName, os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	var lines []string
+
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	if err := file.Truncate(0); err != nil {
+		return err
+	}
+
+	if _, err := file.Seek(0, 0); err != nil {
+		return err
+	}
+
+	for i, line := range lines {
+		if i < len(lines)-1 {
+			if _, err := fmt.Fprintln(file, line); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func removeLinesStartingWith(fileName string, prefixes []string) error {
+	file, err := os.OpenFile(fileName, os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	var lines []string
+
+	// Read all lines and excluding lines starting with prefixes
+	for scanner.Scan() {
+		line := scanner.Text()
+		shouldRemove := false
+		for _, prefix := range prefixes {
+			if strings.HasPrefix(strings.TrimSpace(line), prefix) {
+				shouldRemove = true
+				break
+			}
+		}
+		if !shouldRemove {
+			lines = append(lines, line)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	if err := file.Truncate(0); err != nil {
+		return err
+	}
+
+	if _, err := file.Seek(0, 0); err != nil {
+		return err
+	}
+
+	for _, line := range lines {
+		if _, err := fmt.Fprintln(file, line); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
